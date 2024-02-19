@@ -14,15 +14,19 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // $or method is used to check like this || method
-  const existedUser = User.findOne({ $or: [{ email }, { username }] });
+  const existedUser = await User.findOne({ $or: [{ email }, { username }] });
   if (existedUser) {
     throw new ApiError(400, "User with username or email already existed");
   }
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
+  }
+
+  let coverImageLocalPath;
+  if (req.files && req.files.coverImage && req.files.coverImage.length > 0) {
+    coverImageLocalPath = req.files?.coverImage[0]?.path;
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
