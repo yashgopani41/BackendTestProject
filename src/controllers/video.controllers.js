@@ -1,10 +1,10 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.models.js";
 import { User } from "../models/user.models.js";
-import { ApiError } from "../utils/apiError.js";
-import { ApiResponse } from "../utils/apiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinaryService.js";
+import ApiError from "../utils/apiError.js";
+import ApiResponse from "../utils/apiResponse.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import uploadOnCloudinary from "../utils/cloudinaryService.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
@@ -101,51 +101,56 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
-  const { title, description } = req.body;
-  // TODO: get video, upload to cloudinary, create video
-
-  if (!title || title.trim().length === "") {
-    throw new ApiError(400, "Please provide a title");
-  }
-  if (!description || description.trim().length === "") {
-    throw new ApiError(400, "Please provide a description");
+  // Check if any field is empty
+  if (![title, description].every(Boolean)) {
+    throw new ApiError(400, "All fields are required!");
   }
 
-  const videoLocalPath = req.file?.videoFile[0]?.path;
-  const thumbnailLocalPath = req.file?.thumbNail[0]?.path;
+  // upload video & thumbnail on cloudinary
+  const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
+  const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
 
-  if (!videoLocalPath) {
-    throw new ApiError(400, "Please provide a video file");
+  if (!videoFileLocalPath) {
+    throw new ApiError(400, "Video is missing!");
   }
 
-  // upload on cloudinary
+  if (!thumbnailLocalPath) {
+    throw new ApiError(400, "thumbnail is missing!");
+  }
 
-  const videoUrl = await uploadOnCloudinary(videoLocalPath);
-  const thumbNailUrl = await uploadOnCloudinary(thumbnailLocalPath);
+  const videoFile = await uploadOnCloudinary(videoFileLocalPath);
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
+  if (!videoFile) {
+    throw new ApiError(500, "Failed to upload video!, try again");
+  }
+
+  if (!thumbnail) {
+    throw new ApiError(500, "Failed to upload thumbnail!, try again");
+  }
+
+  // save video details in db
   const video = await Video.create({
-    videoFile: {
-      public_id: videoUrl?.public_id,
-      url: videoUrl?.url,
-    },
-    thumbnail: {
-      public_id: thumbNailUrl?.public_id,
-      url: thumbNailUrl?.url,
-    },
+    videoFile: { key: videoFile?.public_id, url: videoFile?.url },
+    thumbnail: { key: thumbnail?.public_id, url: thumbnail?.url },
     title,
     description,
+    duration: videoFile?.duration,
+    owner: req.user._id,
     isPublished,
-    owner: req.user?._id,
-    duration: videoUrl.duration,
   });
+  console.log("🚀 ~ publishAVideo ~ video:", video);
 
   if (!video) {
-    throw new ApiError(500, "Something went wrong while creating video");
+    throw new ApiError(
+      500,
+      "Something went wrong while uploading video, try again"
+    );
   }
 
   return res
-    .status(201)
-    .json(new ApiResponse(201, "Video Uploaded Successfully", video));
+    .status(200)
+    .json(new ApiResponse(200, { video }, "Video uploaded successfully!"));
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
