@@ -4,6 +4,7 @@ import { User } from "../models/user.models.js";
 import uploadOnCloudinary from "../utils/cloudinaryService.js";
 import ApiResponse from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
   try {
@@ -122,18 +123,25 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: { refreshToken: undefined },
+      $unset: {
+        refreshToken: "",
+      },
     },
-    { new: true }
+    {
+      new: true,
+    }
   );
+
   const options = {
     httpOnly: true,
     secure: true,
   };
 
-  res.status(200).clearCookie("accessToken", options);
-  res.clearCookie("refreshToken", options);
-  return res.json(new ApiResponse(200, {}, "User logged out successfully"));
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged Out"));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -202,7 +210,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  return res.status(200).json(req.user, "Current User Fetched Successfully");
+  return res.status(200).json(req?.user, "Current User Fetched Successfully");
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -214,13 +222,18 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { $set: { fullname, email } },
+    {
+      $set: {
+        fullname,
+        email,
+      },
+    },
     { new: true }
   ).select("-password");
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Account Details Updated Successfully"));
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -315,9 +328,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
           $cond: {
             if: {
               $in: [req.user?._id, "$subscribers.subscriber"],
-              then: true,
-              else: false,
             },
+            then: true,
+            else: false,
           },
         },
       },
@@ -327,7 +340,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         fullname: 1,
         username: 1,
         subscribersCount: 1,
-        channelSubscribedToCount,
+        channelSubscribedToCount: 1,
         isSubscribed: 1,
         avatar: 1,
         coverImage: 1,
