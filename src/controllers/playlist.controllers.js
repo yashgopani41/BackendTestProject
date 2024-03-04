@@ -27,6 +27,27 @@ const createPlaylist = asyncHandler(async (req, res) => {
   }
 });
 
+const updatePlaylist = asyncHandler(async (req, res) => {
+  const { playlistId } = req.params;
+  const { name, description } = req.body;
+  //TODO: update playlist
+  try {
+    if (!name) throw new ApiError(404, "Name is required");
+    const updatePlaylist = await Playlist.updateOne(
+      {
+        _id: new mongoose.Schema.Types.ObjectId(playlistId),
+      },
+      { $set: { name: name, description: description } }
+    );
+    if (!updatePlaylist) throw new ApiError(500, "some error occurred");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { updatePlaylist }, "success"));
+  } catch (e) {
+    throw new ApiError(400, e.message || "Unable to find Playlist");
+  }
+});
+
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   //TODO: get user playlists
@@ -99,27 +120,6 @@ const deletePlaylist = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, { deletePlaylistRequest }, "Success"));
   } catch (e) {
     throw new ApiError(400, e.message || "Unable to delete playlist");
-  }
-});
-
-const updatePlaylist = asyncHandler(async (req, res) => {
-  const { playlistId } = req.params;
-  const { name, description } = req.body;
-  //TODO: update playlist
-  try {
-    if (!name) throw new ApiError(404, "Name is required");
-    const updatePlaylist = await Playlist.updateOne(
-      {
-        _id: new mongoose.Schema.Types.ObjectId(playlistId),
-      },
-      { $set: { name: name, description: description } }
-    );
-    if (!updatePlaylist) throw new ApiError(500, "some error occurred");
-    return res
-      .status(200)
-      .json(new ApiResponse(200, { updatePlaylist }, "success"));
-  } catch (e) {
-    throw new ApiError(400, e.message || "Unable to find Playlist");
   }
 });
 
