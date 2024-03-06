@@ -7,6 +7,7 @@ import {
   removeVideoFromPlaylist,
   deletePlaylist,
   updatePlaylist,
+  addVideoToPlaylist,
 } from "../controllers/playlist.controllers.js";
 
 const router = Router();

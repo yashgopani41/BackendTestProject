@@ -1,5 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
-import { Playlist } from "../models/playlist.models.js";
+import { Playlist } from "../models/playlist.model.js";
 import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -24,6 +24,22 @@ const createPlaylist = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, { createPlaylist }, "Success"));
   } catch (e) {
     throw new ApiError(400, e.message || "Unable to add Playlist");
+  }
+});
+
+const addVideoToPlaylist = asyncHandler(async (req, res) => {
+  const { playlistId, videoId } = req.params;
+  try {
+    const addtoPlaylist = await Playlist.updateOne(
+      { _id: new mongoose.Types.ObjectId(playlistId) },
+      { $push: { videos: videoId } }
+    );
+    if (!addtoPlaylist) throw new ApiError(500, "Unable to update playlist");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { addtoPlaylist }, "Success"));
+  } catch (e) {
+    throw new ApiError(400, e.message || "Unable to find Playlist");
   }
 });
 
@@ -130,4 +146,5 @@ export {
   removeVideoFromPlaylist,
   deletePlaylist,
   updatePlaylist,
+  addVideoToPlaylist,
 };
